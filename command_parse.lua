@@ -4,28 +4,28 @@
  and the value is what will be included in the argument
 --]]
 
-local escape_sequences = {
+local escapeSequences = {
     ['\\'] = "\\",
     ['"'] = '"',
 }
 
-local function format_error(message, index)
+local function formatError(message, index)
     return ("Syntax error: %s at character %s."):format(message, index)
 end
 
 --- Parse a string into a command with support for quotes to allow spaces in arguments, and escape sequences.
 --- @param input string The string you wish to parse
---- @return table? parsed_command The output of the parser; is a dictionary with "name" for the first argument, and "arguments" for a table of the rest of the arguments. Will be nil if the command was parsed unsuccessfully.
---- @return string? error_message The error message that you can display to the user in the case that they incorrectly input a command. Will be nil if the command was parsed successfully.
-local function command_parse(input)
-    local input_length = #input
+--- @return table? parsedCommand The output of the parser; is a dictionary with "name" for the first argument, and "arguments" for a table of the rest of the arguments. Will be nil if the command was parsed unsuccessfully.
+--- @return string? errorMessage The error message that you can display to the user in the case that they incorrectly input a command. Will be nil if the command was parsed successfully.
+local function commandParse(input)
+    local inputLength = #input
 
     local escaping = false
-    local inside_quote = false
+    local insideQuote = false
 
     local arguments = {}
 
-    local current_argument = {
+    local currentArgument = {
         _strings = {},
 
         add = function(self, stringToAdd)
@@ -33,11 +33,11 @@ local function command_parse(input)
             return self
         end,
 
-        clear_and_write = function(self)
+        clearAndWrite = function(self)
             local strings = self._strings
 
-            local argument_string = table.concat(strings)
-            table.insert(arguments, argument_string)
+            local argumentString = table.concat(strings)
+            table.insert(arguments, argumentString)
 
             for k in pairs(strings) do
                 strings[k] = nil
@@ -46,81 +46,81 @@ local function command_parse(input)
     }
 
 
-    for i = 1, input_length do
+    for i = 1, inputLength do
         local char = input:sub(i, i)
 
         local lastchar
-        local lastchar_i = i - 1
+        local lastcharIndex = i - 1
 
         local nextchar
-        local nextchar_i = i + 1
+        local nextcharIndex = i + 1
 
 
-        if nextchar_i <= input_length then
-            nextchar = input:sub(nextchar_i, nextchar_i)
+        if nextcharIndex <= inputLength then
+            nextchar = input:sub(nextcharIndex, nextcharIndex)
         end
 
-        if lastchar_i >= 1 then
-            lastchar = input:sub(lastchar_i, lastchar_i)
+        if lastcharIndex >= 1 then
+            lastchar = input:sub(lastcharIndex, lastcharIndex)
         end
 
         if escaping then
-            local sequence = escape_sequences[char]
+            local sequence = escapeSequences[char]
 
-            if not sequence then return nil, format_error("Invalid escape sequence '\\" .. char .. "'", i - 1) end
+            if not sequence then return nil, formatError("Invalid escape sequence '\\" .. char .. "'", lastcharIndex) end
 
-            current_argument:add(sequence)
+            currentArgument:add(sequence)
             escaping = false
-            goto next_character
+            goto nextCharacter
         end
 
         if char == "\\" then
             escaping = true
-            goto next_character
+            goto nextCharacter
         end
 
         if char == " " then
-            if not inside_quote then
-                current_argument:clear_and_write()
-                goto next_character
+            if not insideQuote then
+                currentArgument:clearAndWrite()
+                goto nextCharacter
             end
         end
 
         if char == "\"" then
-            inside_quote = not inside_quote
+            insideQuote = not insideQuote
 
-            if inside_quote then
+            if insideQuote then
                 if lastchar and lastchar ~= " " then
-                    return nil, format_error("Malformed quote, expected space before quote", i)
+                    return nil, formatError("Malformed quote, expected space before quote", i)
                 end
             else
                 if nextchar and nextchar ~= " " then
-                    return nil, format_error("Malformed quote, expected space after quote", i)
+                    return nil, formatError("Malformed quote, expected space after quote", i)
                 end
             end
 
-            goto next_character
+            goto nextCharacter
         end
 
-        current_argument:add(char)
-        ::next_character::
+        currentArgument:add(char)
+        ::nextCharacter::
     end
 
-    current_argument:clear_and_write()
+    currentArgument:clearAndWrite()
 
-    if inside_quote then return nil, format_error("Unclosed quote", input_length) end
-    if escaping then return nil, format_error("Unfinished escape sequence", input_length) end
+    if insideQuote then return nil, formatError("Unclosed quote", inputLength) end
+    if escaping then return nil, formatError("Unfinished escape sequence", inputLength) end
 
-    local parsed_command = {
+    local parsedCommand = {
         name = arguments[1],
         arguments = {},
     }
 
     for i, argument in pairs(arguments) do
-        if i ~= 1 then table.insert(parsed_command.arguments, argument) end
+        if i ~= 1 then table.insert(parsedCommand.arguments, argument) end
     end
 
-    return parsed_command
+    return parsedCommand
 end
 
-return command_parse
+return commandParse
